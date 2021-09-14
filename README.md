@@ -1,6 +1,6 @@
 # SCAML
 
-Experiments in side-channel analysis and machine learning.
+Experiments in side-channel analysis, machine learning and explainability.
 
 ## Usage
 
