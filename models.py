@@ -1,6 +1,6 @@
-from keras.models import Model, Sequential
-from keras.layers import Flatten, Dense, Input, Conv1D, AveragePooling1D
-from keras.optimizers import RMSprop
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Flatten, Dense, Input, Conv1D, AveragePooling1D
+from tensorflow.keras.optimizers import RMSprop
 
 # From ASCAD
 # https://github.com/ANSSI-FR/ASCAD/blob/master/ASCAD_train_models.py#L38

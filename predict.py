@@ -3,9 +3,8 @@
 import sys
 import numpy as np
 
-from keras.models import load_model
-from keras.utils import to_categorical
-from sklearn.model_selection import train_test_split
+import tensorflow as tf
+from tensorflow.keras.models import load_model
 
 from models import cnn_best
 from aes import aes_sbox, aes_sbox_inv

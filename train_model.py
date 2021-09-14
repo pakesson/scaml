@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 
 from models import cnn_best
