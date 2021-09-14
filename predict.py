@@ -3,10 +3,8 @@
 import sys
 import numpy as np
 
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 
-from models import cnn_best
 from aes import aes_sbox, aes_sbox_inv
 
 def get_label(plaintext, key, index):
@@ -53,8 +51,8 @@ if __name__ == '__main__':
 
         log10_sum_key_guess_history[k] = np.argmax(log10_sum_prediction)
 
-    #print("Key byte guess history:")
-    #print(log10_sum_key_guess_history)
+    print("Key byte guess history:")
+    print(log10_sum_key_guess_history)
 
     print("Best key byte guess: " + str(np.argmax(log10_sum_prediction)))
 
