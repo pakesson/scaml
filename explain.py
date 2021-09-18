@@ -22,6 +22,7 @@ number_of_traces_to_attack = 500
 
 model_filename = "trained_model.h5"
 trace_filename = "attack_traces.npz"
+sensitivity_map_filename = "sensitivity_map.npz"
 
 def apply_occlusion(sample, x, occlusion_size=1, occlusion_value=0):
     occluded_sample = np.array(sample, copy=True)
@@ -70,9 +71,10 @@ def explain(data, model, class_index, occlusion_size=10):
     return sensitivity_maps
 
 if __name__ == '__main__':
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         model_filename = sys.argv[1]
         trace_filename = sys.argv[2]
+        sensitivity_map_filename = sys.argv[3]
 
     model = load_model(model_filename)
     print("Input shape: " + str(model.input_shape))
@@ -106,16 +108,18 @@ if __name__ == '__main__':
     key_index = np.argmax(log10_sum_prediction)
     class_index = aes_sbox[textin_array[start_trace_to_attack, attack_byte] ^ key_index]
     occlusion_size = 1
-    explanation = explain(data, model, class_index, occlusion_size)
+    sensitivity_map = explain(data, model, class_index, occlusion_size)
+    sensitivity_map = sensitivity_map[0]
+
+    # Save results
+    np.savez_compressed(sensitivity_map_filename, sensitivity_map=sensitivity_map)
 
     # Visualize the results
-    explanation = explanation[0]
     fig = plt.figure()
     plt.title(f"Occlusion sensitivity for key byte {attack_byte} in trace {start_trace_to_attack}")
     ax = fig.gca()
-    x = np.linspace(0, explanation.shape[0]-1, explanation.shape[0])
-    for i in range(0, explanation.shape[0]-1, occlusion_size):
-        color = explanation[i]/max(explanation)
+    x = np.linspace(0, sensitivity_map.shape[0]-1, sensitivity_map.shape[0])
+    for i in range(0, sensitivity_map.shape[0]-1, occlusion_size):
+        color = sensitivity_map[i]/max(sensitivity_map)
         ax.plot(x[i:i+occlusion_size+1], data[i:i+occlusion_size+1, 0], color=plt.cm.plasma(color))
     plt.show()
-    #plt.savefig("explanation_output.png")
