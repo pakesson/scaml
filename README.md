@@ -48,7 +48,7 @@ This uses basic occlusion sensitivity to find the specific points responsible
 for the leakage in a trace.
 
 ```
-$ ./explain.py trained_model.h5 attack_traces.npz
+$ ./explain.py trained_model.h5 attack_traces.npz sensitivity_map.npz
 ```
 
 Example output:
