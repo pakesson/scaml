@@ -17,7 +17,7 @@ epochs = 150
 batch_size = 100
 learning_rate = 0.00001
 test_size = 0.2
-verbose = True
+verbose = 2
 num_classes = 256
 attack_byte = 0
 
