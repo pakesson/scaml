@@ -2,6 +2,14 @@
 
 Experiments in side-channel analysis, machine learning and explainability.
 
+## Setup
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then run:
+
+```sh
+uv sync --locked
+```
+
 ## Usage
 
 Prerequisites: Captured power traces in `.npz` format.
@@ -20,7 +28,7 @@ This will train a model for key byte 0 based on the first round AES SBox output.
 Different key bytes can be specified in the script.
 
 ```
-$ ./train_model.py trained_model.h5 training_traces.npz
+$ uv run train_model.py trained_model.h5 training_traces.npz
 [...]
 ```
 
@@ -30,7 +38,7 @@ This uses a subset of the attack trace to predict the correct key byte using
 sum of log probabilities.
 
 ```
-$ ./predict.py trained_model.h5 attack_traces.npz
+$ uv run predict.py trained_model.h5 attack_traces.npz
 [...]
 Key byte guess history:
 [137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137.
@@ -48,7 +56,7 @@ This uses basic occlusion sensitivity to find the specific points responsible
 for the leakage in a trace.
 
 ```
-$ ./explain.py trained_model.h5 attack_traces.npz sensitivity_map.npz
+$ uv run explain.py trained_model.h5 attack_traces.npz sensitivity_map.npz
 ```
 
 Example output:
@@ -61,7 +69,7 @@ using DWARF information to get function names, source code files and line number
 With the sensitivity map, execution trace and original source code files
 available, the mapping can be done with
 ```
-$ ./trace_to_source.py ./sensitivity_map.npz ./execution_trace.pkl ./source_path/
+$ uv run trace_to_source.py ./sensitivity_map.npz ./execution_trace.pkl ./source_path/
 ```
 
 This will find matches for the top five points in the sensitivity map, and print

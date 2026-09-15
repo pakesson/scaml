@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+
+# Local trace data and generated models
+*.npz
+*.h5
+*.keras
+*.pkl

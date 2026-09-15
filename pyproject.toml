@@ -1,0 +1,24 @@
+[project]
+name = "scaml"
+version = "0.1.0"
+description = "Experiments in side-channel analysis, machine learning and explainability"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "matplotlib>=3.9,<4",
+    "numpy>=1.26,<3",
+    "scikit-learn>=1.5,<2",
+    "tensorflow>=2.16,<3",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.15,<0.16"]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
