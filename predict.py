@@ -3,9 +3,9 @@
 import sys
 
 import numpy as np
-from tensorflow.keras.models import load_model
 
 from aes import aes_sbox, aes_sbox_inv
+from models import get_device, load_model, predict
 
 
 def get_label(plaintext, key, index):
@@ -17,7 +17,7 @@ attack_byte = 0
 start_trace_to_attack = 100
 number_of_traces_to_attack = 500
 
-model_filename = "trained_model.h5"
+model_filename = "trained_model.pt"
 trace_filename = "attack_traces.npz"
 
 if __name__ == "__main__":
@@ -25,8 +25,10 @@ if __name__ == "__main__":
         model_filename = sys.argv[1]
         trace_filename = sys.argv[2]
 
-    model = load_model(model_filename)
+    device = get_device()
+    model = load_model(model_filename, device)
     print("Input shape: " + str(model.input_shape))
+    print("Device: " + str(device))
 
     traces = np.load(trace_filename)
 
@@ -38,12 +40,14 @@ if __name__ == "__main__":
 
     trace_array = trace_array.reshape((trace_array.shape[0], trace_array.shape[1], 1))
 
-    result = model.predict(
+    result = predict(
+        model,
         trace_array[
             start_trace_to_attack : start_trace_to_attack + number_of_traces_to_attack,
             :,
             :,
-        ]
+        ],
+        device,
     )
 
     log10_sum_key_guess_history = np.zeros(number_of_traces_to_attack)

@@ -28,7 +28,7 @@ This will train a model for key byte 0 based on the first round AES SBox output.
 Different key bytes can be specified in the script.
 
 ```
-$ uv run train_model.py trained_model.h5 training_traces.npz
+$ uv run train_model.py trained_model.pt training_traces.npz
 [...]
 ```
 
@@ -38,7 +38,7 @@ This uses a subset of the attack trace to predict the correct key byte using
 sum of log probabilities.
 
 ```
-$ uv run predict.py trained_model.h5 attack_traces.npz
+$ uv run predict.py trained_model.pt attack_traces.npz
 [...]
 Key byte guess history:
 [137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137. 137.
@@ -56,7 +56,7 @@ This uses basic occlusion sensitivity to find the specific points responsible
 for the leakage in a trace.
 
 ```
-$ uv run explain.py trained_model.h5 attack_traces.npz sensitivity_map.npz
+$ uv run explain.py trained_model.pt attack_traces.npz sensitivity_map.npz
 ```
 
 Example output:

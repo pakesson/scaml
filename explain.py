@@ -5,9 +5,9 @@ import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
-from tensorflow.keras.models import load_model
 
 from aes import aes_sbox, aes_sbox_inv
+from models import get_device, load_model, predict
 
 
 def get_label(plaintext, key, index):
@@ -28,7 +28,7 @@ def apply_occlusion(sample, x, occlusion_size=1, occlusion_value=0):
     return occluded_sample
 
 
-def get_occlusion_sensitivity(samples, model, class_index, occlusion_size=1):
+def get_occlusion_sensitivity(samples, model, device, class_index, occlusion_size=1):
     print("Generating occlusion sensitivity maps...")
 
     confidence_map = np.zeros(math.ceil(samples[0].shape[0] / occlusion_size))
@@ -44,7 +44,7 @@ def get_occlusion_sensitivity(samples, model, class_index, occlusion_size=1):
             for x in range(0, sample.shape[0], occlusion_size)
         ]
 
-        predictions = model.predict(np.array(occlusions), batch_size=32)
+        predictions = predict(model, np.array(occlusions), device, batch_size=32)
         target_class_predictions = [
             prediction[class_index[idx]] for prediction in predictions
         ]
@@ -66,7 +66,7 @@ def get_occlusion_sensitivity(samples, model, class_index, occlusion_size=1):
     return result
 
 
-def explain(data, model, class_index, occlusion_size=1):
+def explain(data, model, device, class_index, occlusion_size=1):
     # Make sure the data shape is (num_traces, num_points_per_trace, x)
     if len(data.shape) == 2:
         data = data.reshape((1, data.shape[0], data.shape[1]))
@@ -77,7 +77,7 @@ def explain(data, model, class_index, occlusion_size=1):
         raise ValueError("unsupported data shape")
 
     # Generate one map for all samples
-    return get_occlusion_sensitivity(data, model, class_index, occlusion_size)
+    return get_occlusion_sensitivity(data, model, device, class_index, occlusion_size)
 
 
 if __name__ == "__main__":
@@ -92,8 +92,10 @@ if __name__ == "__main__":
     trace_filename = sys.argv[2]
     sensitivity_map_filename = sys.argv[3]
 
-    model = load_model(model_filename)
+    device = get_device()
+    model = load_model(model_filename, device)
     print("Input shape: " + str(model.input_shape))
+    print("Device: " + str(device))
 
     traces = np.load(trace_filename)
 
@@ -106,12 +108,14 @@ if __name__ == "__main__":
     trace_array = trace_array.reshape((trace_array.shape[0], trace_array.shape[1], 1))
 
     # Run an initial prediction before we try to explain anything
-    result = model.predict(
+    result = predict(
+        model,
         trace_array[
             start_trace_to_attack : start_trace_to_attack + number_of_traces_to_attack,
             :,
             :,
-        ]
+        ],
+        device,
     )
 
     log10_sum_prediction = np.zeros(num_classes)
@@ -142,7 +146,7 @@ if __name__ == "__main__":
         ^ key_index
     ]
 
-    sensitivity_map = explain(data, model, class_index, occlusion_size)
+    sensitivity_map = explain(data, model, device, class_index, occlusion_size)
 
     # Save results
     np.savez_compressed(sensitivity_map_filename, sensitivity_map=sensitivity_map)
