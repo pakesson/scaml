@@ -39,16 +39,12 @@ if __name__ == "__main__":
     textin_array = traces["textin_array"]
     known_keys = traces["known_keys"]
 
-    # Reshape traces
-    trace_array = trace_array.reshape((trace_array.shape[0], trace_array.shape[1], 1))
-
-    number_of_traces = np.shape(trace_array)[0]
-    samples_per_trace = np.shape(trace_array)[1]
+    number_of_traces = trace_array.shape[0]
 
     # Create model
     device = get_device()
     model = cnn_best(
-        input_shape=(samples_per_trace, 1), classes=num_classes, lr=learning_rate
+        input_shape=trace_array.shape[1:], classes=num_classes, lr=learning_rate
     ).to(device)
     print("Input shape: " + str(model.input_shape))
     print("Device: " + str(device))

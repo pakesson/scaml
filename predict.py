@@ -38,8 +38,6 @@ if __name__ == "__main__":
     textin_array = traces["textin_array"]
     known_keys = traces["known_keys"]
 
-    trace_array = trace_array.reshape((trace_array.shape[0], trace_array.shape[1], 1))
-
     result = predict(
         model,
         trace_array[

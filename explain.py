@@ -24,15 +24,15 @@ occlusion_size = 1
 
 def apply_occlusion(sample, x, occlusion_size=1, occlusion_value=0):
     occluded_sample = np.array(sample, copy=True)
-    occluded_sample[x : x + occlusion_size, :] = occlusion_value
+    occluded_sample[:, x : x + occlusion_size] = occlusion_value
     return occluded_sample
 
 
 def get_occlusion_sensitivity(samples, model, device, class_index, occlusion_size=1):
     print("Generating occlusion sensitivity maps...")
 
-    confidence_map = np.zeros(math.ceil(samples[0].shape[0] / occlusion_size))
-    sensitivity_map = np.zeros(math.ceil(samples[0].shape[0] / occlusion_size))
+    confidence_map = np.zeros(math.ceil(samples[0].shape[1] / occlusion_size))
+    sensitivity_map = np.zeros(math.ceil(samples[0].shape[1] / occlusion_size))
 
     for idx, sample in enumerate(samples):
         print(f" Sample {idx}")
@@ -41,7 +41,7 @@ def get_occlusion_sensitivity(samples, model, device, class_index, occlusion_siz
 
         occlusions = [
             apply_occlusion(sample, x, occlusion_size, occlusion_value)
-            for x in range(0, sample.shape[0], occlusion_size)
+            for x in range(0, sample.shape[1], occlusion_size)
         ]
 
         predictions = predict(model, np.array(occlusions), device, batch_size=32)
@@ -59,7 +59,7 @@ def get_occlusion_sensitivity(samples, model, device, class_index, occlusion_siz
     sensitivity_map = 1 - confidence_map
 
     # Scale back up
-    result = np.zeros(samples[0].shape[0])
+    result = np.zeros(samples[0].shape[1])
     for x in range(result.shape[0]):
         result[x] = sensitivity_map[x // occlusion_size]
 
@@ -67,7 +67,7 @@ def get_occlusion_sensitivity(samples, model, device, class_index, occlusion_siz
 
 
 def explain(data, model, device, class_index, occlusion_size=1):
-    # Make sure the data shape is (num_traces, num_points_per_trace, x)
+    # Make sure the data shape is (num_traces, channels, num_points_per_trace)
     if len(data.shape) == 2:
         data = data.reshape((1, data.shape[0], data.shape[1]))
         class_index = class_index.reshape(
@@ -104,8 +104,6 @@ if __name__ == "__main__":
     trace_array = traces["trace_array"]
     textin_array = traces["textin_array"]
     known_keys = traces["known_keys"]
-
-    trace_array = trace_array.reshape((trace_array.shape[0], trace_array.shape[1], 1))
 
     # Run an initial prediction before we try to explain anything
     result = predict(
@@ -162,7 +160,7 @@ if __name__ == "__main__":
         color = (sensitivity_map[i] - min(sensitivity_map)) / np.ptp(sensitivity_map)
         ax.plot(
             x[i : i + occlusion_size + 1],
-            data[0, i : i + occlusion_size + 1, 0],
+            data[0, 0, i : i + occlusion_size + 1],
             color=plt.cm.plasma(color),
         )
     plt.show()

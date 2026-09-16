@@ -4,12 +4,12 @@ from torch import nn
 
 
 class CNNBest(nn.Module):
-    def __init__(self, input_shape=(5000, 1), classes=256):
+    def __init__(self, input_shape=(1, 5000), classes=256):
         super().__init__()
         self.input_shape = tuple(input_shape)
         self.classes = classes
 
-        self.block1_conv1 = nn.Conv1d(self.input_shape[1], 64, 11, padding="same")
+        self.block1_conv1 = nn.Conv1d(self.input_shape[0], 64, 11, padding="same")
         self.block1_pool = nn.AvgPool1d(2, stride=2)
         self.block2_conv1 = nn.Conv1d(64, 128, 11, padding="same")
         self.block2_pool = nn.AvgPool1d(2, stride=2)
@@ -20,7 +20,7 @@ class CNNBest(nn.Module):
         self.block5_conv1 = nn.Conv1d(512, 512, 11, padding="same")
         self.block5_pool = nn.AvgPool1d(2, stride=2)
 
-        pooled_length = self.input_shape[0]
+        pooled_length = self.input_shape[1]
         for _ in range(5):
             pooled_length //= 2
         self.flatten = nn.Flatten()
@@ -38,15 +38,11 @@ class CNNBest(nn.Module):
             nn.init.zeros_(layer.bias)
 
     def forward(self, inputs, return_logits=False):
-        # Trace files use Keras' channels-last layout; Conv1d uses channels-first.
-        x = inputs.transpose(1, 2)
-        x = self.block1_pool(self.relu(self.block1_conv1(x)))
+        x = self.block1_pool(self.relu(self.block1_conv1(inputs)))
         x = self.block2_pool(self.relu(self.block2_conv1(x)))
         x = self.block3_pool(self.relu(self.block3_conv1(x)))
         x = self.block4_pool(self.relu(self.block4_conv1(x)))
         x = self.block5_pool(self.relu(self.block5_conv1(x)))
-        # Match Keras Flatten's channels-last element order.
-        x = x.transpose(1, 2)
         x = self.flatten(x)
         x = self.relu(self.fc1(x))
         x = self.relu(self.fc2(x))
@@ -60,7 +56,7 @@ class CNNBest(nn.Module):
 # https://github.com/ANSSI-FR/ASCAD/blob/master/ASCAD_train_models.py#L38
 # License: "The databases, the Deep Learning models and the companion python
 # scripts of this repository are placed into the public domain."
-def cnn_best(input_shape=(5000, 1), classes=256, lr=0.00001):
+def cnn_best(input_shape=(1, 5000), classes=256, lr=0.00001):
     # The learning rate is accepted here to preserve the existing model factory API.
     del lr
     return CNNBest(input_shape=input_shape, classes=classes)
