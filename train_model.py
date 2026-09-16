@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import time
 
 import numpy as np
 import torch
@@ -14,6 +15,39 @@ from models import cnn_best, get_device, save_model
 
 def get_label(plaintext, key, index):
     return aes_sbox[plaintext[index] ^ key[index]]
+
+
+def format_duration(seconds):
+    minutes, seconds = divmod(int(seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}:{minutes:02d}:{seconds:02d}"
+
+
+def print_progress(
+    phase,
+    batch_number,
+    total_batches,
+    processed_samples,
+    total_loss,
+    total_correct,
+    start_time,
+):
+    update_interval = max(1, total_batches // 100)
+    if batch_number != total_batches and batch_number % update_interval != 0:
+        return
+
+    elapsed = time.monotonic() - start_time
+    eta = elapsed / batch_number * (total_batches - batch_number)
+    end = "\n" if batch_number == total_batches else "\r"
+    print(
+        f"  {phase}: {batch_number}/{total_batches} batches "
+        f"({batch_number / total_batches:.0%}) - "
+        f"loss: {total_loss / processed_samples:.4f} - "
+        f"accuracy: {total_correct / processed_samples:.4f} - "
+        f"elapsed: {format_duration(elapsed)} - ETA: {format_duration(eta)}",
+        end=end,
+        flush=True,
+    )
 
 
 epochs = 150
@@ -49,10 +83,12 @@ if __name__ == "__main__":
     print("Input shape: " + str(model.input_shape))
     print("Device: " + str(device))
 
+    print("Generating labels...", flush=True)
     labels = np.zeros(number_of_traces)
     for x in range(number_of_traces):
         labels[x] = get_label(textin_array[x], known_keys[x], attack_byte)
 
+    print("Splitting training and validation data...", flush=True)
     X_train, X_test, y_train, y_test = train_test_split(
         trace_array, labels, test_size=test_size
     )
@@ -68,10 +104,13 @@ if __name__ == "__main__":
     model_dtype = next(model.parameters()).dtype
 
     for epoch in range(epochs):
+        print(f"Epoch {epoch + 1}/{epochs}", flush=True)
         model.train()
         training_loss = 0.0
         training_correct = 0
-        for inputs, targets in train_loader:
+        training_samples = 0
+        training_start = time.monotonic()
+        for batch_number, (inputs, targets) in enumerate(train_loader, start=1):
             inputs = inputs.to(device=device, dtype=model_dtype)
             targets = targets.to(device=device, dtype=torch.long)
 
@@ -83,18 +122,40 @@ if __name__ == "__main__":
 
             training_loss += loss.item() * inputs.shape[0]
             training_correct += (logits.argmax(dim=1) == targets).sum().item()
+            training_samples += inputs.shape[0]
+            print_progress(
+                "Training",
+                batch_number,
+                len(train_loader),
+                training_samples,
+                training_loss,
+                training_correct,
+                training_start,
+            )
 
         model.eval()
         validation_loss = 0.0
         validation_correct = 0
+        validation_samples = 0
+        validation_start = time.monotonic()
         with torch.no_grad():
-            for inputs, targets in test_loader:
+            for batch_number, (inputs, targets) in enumerate(test_loader, start=1):
                 inputs = inputs.to(device=device, dtype=model_dtype)
                 targets = targets.to(device=device, dtype=torch.long)
                 logits = model(inputs, return_logits=True)
                 loss = loss_function(logits, targets)
                 validation_loss += loss.item() * inputs.shape[0]
                 validation_correct += (logits.argmax(dim=1) == targets).sum().item()
+                validation_samples += inputs.shape[0]
+                print_progress(
+                    "Validation",
+                    batch_number,
+                    len(test_loader),
+                    validation_samples,
+                    validation_loss,
+                    validation_correct,
+                    validation_start,
+                )
 
         if verbose:
             print(
