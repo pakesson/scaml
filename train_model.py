@@ -2,6 +2,7 @@
 
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -21,6 +22,11 @@ def format_duration(seconds):
     minutes, seconds = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     return f"{hours}:{minutes:02d}:{seconds:02d}"
+
+
+def checkpoint_filename_for_epoch(filename, epoch):
+    filename = Path(filename)
+    return filename.with_name(f"{filename.stem}.epoch-{epoch:04d}{filename.suffix}")
 
 
 def print_progress(
@@ -58,6 +64,7 @@ verbose = 2
 num_classes = 256
 attack_byte = 0
 use_mps_bfloat16 = True
+checkpoint_epochs = {5, 10, 20, 40, 80}
 
 trace_filename = "training_traces.npz"
 model_filename = "trained_model.pt"
@@ -105,6 +112,14 @@ if __name__ == "__main__":
     )
     loss_function = nn.CrossEntropyLoss()
     model_dtype = next(model.parameters()).dtype
+    training_config = {
+        "epochs": epochs,
+        "batch_size": batch_size,
+        "learning_rate": learning_rate,
+        "test_size": test_size,
+        "attack_byte": attack_byte,
+        "use_mps_bfloat16": use_mps_bfloat16,
+    }
 
     for epoch in range(epochs):
         print(f"Epoch {epoch + 1}/{epochs}", flush=True)
@@ -175,4 +190,22 @@ if __name__ == "__main__":
                 f"val_accuracy: {validation_correct / len(test_data):.4f}"
             )
 
-    save_model(model, model_filename)
+        completed_epoch = epoch + 1
+        if completed_epoch in checkpoint_epochs:
+            checkpoint_filename = checkpoint_filename_for_epoch(
+                model_filename, completed_epoch
+            )
+            print(f"Saving checkpoint: {checkpoint_filename}", flush=True)
+            save_model(
+                model,
+                checkpoint_filename,
+                epoch=completed_epoch,
+                training_config=training_config,
+            )
+
+    save_model(
+        model,
+        model_filename,
+        epoch=epochs,
+        training_config=training_config,
+    )

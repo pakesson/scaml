@@ -1,3 +1,7 @@
+import os
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import torch
 from torch import nn
@@ -70,15 +74,34 @@ def get_device():
     return torch.device("cpu")
 
 
-def save_model(model, filename):
-    torch.save(
-        {
-            "input_shape": model.input_shape,
-            "classes": model.classes,
-            "model_state_dict": model.state_dict(),
-        },
-        filename,
+def save_model(model, filename, epoch=None, training_config=None):
+    checkpoint = {
+        "format_version": 1,
+        "input_shape": model.input_shape,
+        "classes": model.classes,
+        "model_state_dict": model.state_dict(),
+    }
+    if epoch is not None:
+        checkpoint["epoch"] = epoch
+    if training_config is not None:
+        checkpoint["training_config"] = dict(training_config)
+
+    filename = Path(filename)
+    temporary_file = tempfile.NamedTemporaryFile(
+        dir=filename.parent,
+        prefix=f".{filename.name}.",
+        suffix=".tmp",
+        delete=False,
     )
+    temporary_filename = Path(temporary_file.name)
+    temporary_file.close()
+
+    try:
+        torch.save(checkpoint, temporary_filename)
+        os.replace(temporary_filename, filename)
+    except BaseException:
+        temporary_filename.unlink(missing_ok=True)
+        raise
 
 
 def load_model(filename, device):
