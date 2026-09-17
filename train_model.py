@@ -57,6 +57,7 @@ test_size = 0.2
 verbose = 2
 num_classes = 256
 attack_byte = 0
+use_mps_bfloat16 = True
 
 trace_filename = "training_traces.npz"
 model_filename = "trained_model.pt"
@@ -82,6 +83,8 @@ if __name__ == "__main__":
     ).to(device)
     print("Input shape: " + str(model.input_shape))
     print("Device: " + str(device))
+    use_amp = use_mps_bfloat16 and device.type == "mps"
+    print("MPS bfloat16 AMP: " + ("enabled" if use_amp else "disabled"))
 
     print("Generating labels...", flush=True)
     labels = np.zeros(number_of_traces)
@@ -115,8 +118,11 @@ if __name__ == "__main__":
             targets = targets.to(device=device, dtype=torch.long)
 
             optimizer.zero_grad()
-            logits = model(inputs, return_logits=True)
-            loss = loss_function(logits, targets)
+            with torch.autocast(
+                device_type=device.type, dtype=torch.bfloat16, enabled=use_amp
+            ):
+                logits = model(inputs, return_logits=True)
+                loss = loss_function(logits, targets)
             loss.backward()
             optimizer.step()
 
@@ -142,8 +148,11 @@ if __name__ == "__main__":
             for batch_number, (inputs, targets) in enumerate(test_loader, start=1):
                 inputs = inputs.to(device=device, dtype=model_dtype)
                 targets = targets.to(device=device, dtype=torch.long)
-                logits = model(inputs, return_logits=True)
-                loss = loss_function(logits, targets)
+                with torch.autocast(
+                    device_type=device.type, dtype=torch.bfloat16, enabled=use_amp
+                ):
+                    logits = model(inputs, return_logits=True)
+                    loss = loss_function(logits, targets)
                 validation_loss += loss.item() * inputs.shape[0]
                 validation_correct += (logits.argmax(dim=1) == targets).sum().item()
                 validation_samples += inputs.shape[0]
