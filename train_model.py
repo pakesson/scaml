@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
 from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, Subset, TensorDataset
 
 from aes import aes_sbox
 from models import cnn_best, get_device, save_model
@@ -89,11 +89,11 @@ if __name__ == "__main__":
         labels[x] = get_label(textin_array[x], known_keys[x], attack_byte)
 
     print("Splitting training and validation data...", flush=True)
-    X_train, X_test, y_train, y_test = train_test_split(
-        trace_array, labels, test_size=test_size
-    )
-    train_data = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
-    test_data = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
+    indices = np.arange(number_of_traces)
+    train_indices, test_indices = train_test_split(indices, test_size=test_size)
+    dataset = TensorDataset(torch.from_numpy(trace_array), torch.from_numpy(labels))
+    train_data = Subset(dataset, train_indices)
+    test_data = Subset(dataset, test_indices)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(test_data, batch_size=batch_size)
 
