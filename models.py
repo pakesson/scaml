@@ -104,13 +104,20 @@ def save_model(model, filename, epoch=None, training_config=None):
         raise
 
 
-def load_model(filename, device):
+def load_model(filename, device, return_metadata=False):
     checkpoint = torch.load(filename, map_location="cpu", weights_only=True)
     model = cnn_best(
         input_shape=tuple(checkpoint["input_shape"]), classes=checkpoint["classes"]
     )
     model.load_state_dict(checkpoint["model_state_dict"])
-    return model.to(device)
+    metadata = {
+        name: value for name, value in checkpoint.items() if name != "model_state_dict"
+    }
+    del checkpoint
+    model = model.to(device)
+    if return_metadata:
+        return model, metadata
+    return model
 
 
 def predict(model, samples, device, batch_size=32):
