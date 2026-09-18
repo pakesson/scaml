@@ -64,6 +64,7 @@ verbose = 2
 num_classes = 256
 attack_byte = 0
 use_mps_bfloat16 = True
+use_cuda_float16 = True
 checkpoint_epochs = {5, 10, 20, 40, 80}
 
 trace_filename = "training_traces.npz"
@@ -90,8 +91,12 @@ if __name__ == "__main__":
     ).to(device)
     print("Input shape: " + str(model.input_shape))
     print("Device: " + str(device))
-    use_amp = use_mps_bfloat16 and device.type == "mps"
-    print("MPS bfloat16 AMP: " + ("enabled" if use_amp else "disabled"))
+    use_mps_amp = use_mps_bfloat16 and device.type == "mps"
+    use_cuda_amp = use_cuda_float16 and device.type == "cuda"
+    use_amp = use_mps_amp or use_cuda_amp
+    amp_dtype = torch.float16 if use_cuda_amp else torch.bfloat16
+    print("MPS bfloat16 AMP: " + ("enabled" if use_mps_amp else "disabled"))
+    print("CUDA float16 AMP: " + ("enabled" if use_cuda_amp else "disabled"))
 
     print("Generating labels...", flush=True)
     labels = np.zeros(number_of_traces)
@@ -110,6 +115,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.RMSprop(
         model.parameters(), lr=learning_rate, alpha=0.9, eps=1e-7
     )
+    grad_scaler = torch.amp.GradScaler("cuda") if use_cuda_amp else None
     loss_function = nn.CrossEntropyLoss()
     model_dtype = next(model.parameters()).dtype
     training_config = {
@@ -119,6 +125,7 @@ if __name__ == "__main__":
         "test_size": test_size,
         "attack_byte": attack_byte,
         "use_mps_bfloat16": use_mps_bfloat16,
+        "use_cuda_float16": use_cuda_float16,
     }
 
     for epoch in range(epochs):
@@ -134,12 +141,17 @@ if __name__ == "__main__":
 
             optimizer.zero_grad()
             with torch.autocast(
-                device_type=device.type, dtype=torch.bfloat16, enabled=use_amp
+                device_type=device.type, dtype=amp_dtype, enabled=use_amp
             ):
                 logits = model(inputs, return_logits=True)
                 loss = loss_function(logits, targets)
-            loss.backward()
-            optimizer.step()
+            if grad_scaler is None:
+                loss.backward()
+                optimizer.step()
+            else:
+                grad_scaler.scale(loss).backward()
+                grad_scaler.step(optimizer)
+                grad_scaler.update()
 
             training_loss += loss.item() * inputs.shape[0]
             training_correct += (logits.argmax(dim=1) == targets).sum().item()
@@ -164,7 +176,7 @@ if __name__ == "__main__":
                 inputs = inputs.to(device=device, dtype=model_dtype)
                 targets = targets.to(device=device, dtype=torch.long)
                 with torch.autocast(
-                    device_type=device.type, dtype=torch.bfloat16, enabled=use_amp
+                    device_type=device.type, dtype=amp_dtype, enabled=use_amp
                 ):
                     logits = model(inputs, return_logits=True)
                     loss = loss_function(logits, targets)
