@@ -86,6 +86,9 @@ if __name__ == "__main__":
 
     # Create model
     device = get_device()
+    if device.type == "cuda":
+        torch.set_float32_matmul_precision("high")
+
     model = cnn_best(
         input_shape=trace_array.shape[1:], classes=num_classes, lr=learning_rate
     ).to(device)
