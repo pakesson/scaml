@@ -120,7 +120,7 @@ def load_model(filename, device, return_metadata=False):
     return model
 
 
-def predict(model, samples, device, batch_size=32):
+def predict(model, samples, device, batch_size=32, return_logits=False):
     predictions = []
     model.eval()
     with torch.no_grad():
@@ -130,7 +130,9 @@ def predict(model, samples, device, batch_size=32):
                 dtype=next(model.parameters()).dtype,
                 device=device,
             )
-            predictions.append(model(batch).cpu().numpy())
+            predictions.append(
+                model(batch, return_logits=return_logits).cpu().numpy()
+            )
     if not predictions:
         return np.empty((0, model.classes), dtype=np.float32)
     return np.concatenate(predictions)

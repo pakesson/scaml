@@ -3,6 +3,7 @@
 import sys
 
 import numpy as np
+import torch
 
 from aes import aes_sbox, aes_sbox_inv
 from models import get_device, load_model, predict
@@ -46,26 +47,26 @@ if __name__ == "__main__":
             :,
         ],
         device,
+        return_logits=True,
     )
+    log_probabilities = torch.log_softmax(torch.from_numpy(result), dim=1).numpy()
 
-    log10_sum_key_guess_history = np.zeros(number_of_traces_to_attack)
-    log10_sum_prediction = np.zeros(num_classes)
+    log_sum_key_guess_history = np.zeros(number_of_traces_to_attack)
+    log_sum_prediction = np.zeros(num_classes)
 
     for k in range(number_of_traces_to_attack):
         plaintext = textin_array[start_trace_to_attack + k, attack_byte]
-        prediction = result[k]
+        log_probability = log_probabilities[k]
 
         for label_index in range(num_classes):
             key_byte_index = aes_sbox_inv[label_index] ^ plaintext
-            log10_sum_prediction[key_byte_index] += np.log10(
-                prediction[label_index] + 1e-22
-            )
+            log_sum_prediction[key_byte_index] += log_probability[label_index]
 
-        log10_sum_key_guess_history[k] = np.argmax(log10_sum_prediction)
+        log_sum_key_guess_history[k] = np.argmax(log_sum_prediction)
 
     print("Key byte guess history:")
-    print(log10_sum_key_guess_history)
+    print(log_sum_key_guess_history)
 
-    print("Best key byte guess: " + str(np.argmax(log10_sum_prediction)))
+    print("Best key byte guess: " + str(np.argmax(log_sum_prediction)))
 
     print("known_keys[0]: " + str(known_keys[0]))
