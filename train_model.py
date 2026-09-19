@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import math
 import sys
 import time
 from pathlib import Path
@@ -116,7 +117,10 @@ if __name__ == "__main__":
     test_loader = DataLoader(test_data, batch_size=batch_size)
 
     optimizer = torch.optim.RMSprop(
-        model.parameters(), lr=learning_rate, alpha=0.9, eps=1e-7
+        model.parameters(),
+        lr=learning_rate,
+        alpha=0.9,
+        eps=math.sqrt(1e-7)
     )
     grad_scaler = torch.amp.GradScaler("cuda") if use_cuda_amp else None
     loss_function = nn.CrossEntropyLoss()
